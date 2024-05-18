@@ -6,9 +6,9 @@ import hashlib
 import sys
 
 # bytes to read at a time from file (10meg)
-readlength=10*1024*1024
+readlength = 10 * 1024 * 1024
 
-magic = '\x01\x30\x82\x01\x13\x02\x01\x01\x04\x20'
+magic = b'\x01\x30\x82\x01\x13\x02\x01\x01\x04\x20'
 magiclen = len(magic)
 
 
@@ -21,9 +21,9 @@ def b58encode(v):
     """ encode v, which is a string of bytes, to base58.
     """
 
-    long_value = 0L
+    long_value = 0
     for (i, c) in enumerate(v[::-1]):
-        long_value += (256**i) * ord(c)
+        long_value += (256**i) * c
 
     result = ''
     while long_value >= __b58base:
@@ -36,7 +36,7 @@ def b58encode(v):
     # leading 0-bytes in the input become leading-1s
     nPad = 0
     for c in v:
-        if c != '\0': 
+        if c != 0: 
             break
         nPad += 1
 
@@ -68,7 +68,7 @@ def find_keys(filename):
                 if pos == -1:
                     break
                 key_offset = pos + magiclen
-                key_data = "\x80" + data[key_offset:key_offset + 32]
+                key_data = b"\x80" + data[key_offset:key_offset + 32]
                 keys.add(EncodeBase58Check(key_data))
                 pos += 1
 
@@ -80,12 +80,13 @@ def find_keys(filename):
 
 def main():
     if len(sys.argv) != 2:
-        print "./{0} <filename>".format(sys.argv[0])
+        print(f"./{sys.argv[0]} <filename>")
         exit()
 
     keys = find_keys(sys.argv[1])
+    print(f"Found {len(keys)} keys in {sys.argv[1]}")
     for key in keys:
-        print key
+        print(key)
 
 if __name__ == "__main__":
     main()
