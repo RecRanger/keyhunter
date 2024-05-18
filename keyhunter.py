@@ -25,10 +25,9 @@ B58_BASE = len(B58_CHARS)  # literally 58
 def b58encode(v):
     """encode v, which is a string of bytes, to base58."""
 
-    # long_value = 0L
     long_value = 0
     for i, c in enumerate(v[::-1]):
-        long_value += (256**i) * ord(c)
+        long_value += (256**i) * c
 
     result = ""
     while long_value >= B58_BASE:
@@ -41,7 +40,7 @@ def b58encode(v):
     # leading 0-bytes in the input become leading-1s
     nPad = 0
     for c in v:
-        if c != "\0":
+        if c != 0:
             break
         nPad += 1
 
