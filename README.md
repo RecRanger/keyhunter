@@ -7,16 +7,16 @@ A tool to recover lost bitcoin private keys from dead hard drives.
 
 ```bash
 python3 keyhunter.py /dev/sdX
-
+# --or--
 ./keyhunter.py /dev/sdX
 ```
 
 The output should list found private keys, in base58 key import format.
 
-To import into bitcoind, use the following command:
+To import into bitcoind, use the following command for each key:
 
 ```bash
-bitcoind importprivkey 5K????????????? yay
+bitcoind importprivkey 5KXXXXXXXXXXXX
 bitcoind getbalance
 ```
 
