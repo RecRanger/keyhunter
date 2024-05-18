@@ -20,4 +20,9 @@ bitcoind importprivkey 5KXXXXXXXXXXXX
 bitcoind getbalance
 ```
 
+## Features and Limitations
+* Supports both pre-2012 and post-2012 wallet keys.
+* Supports logging to a file.
+* Cannot find encrypted wallets.
+
 DONATIONS --> 1YAyBtCwvZqNF9umZTUmfQ6vvLQRTG9qG

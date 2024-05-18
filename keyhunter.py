@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # bytes to read at a time from file (10 MiB)
 READ_BLOCK_SIZE = 10 * 1024 * 1024
 
+# magic bytes reference: https://bitcointalk.org/index.php?topic=2745783.msg28084524#msg28084524
 MAGIC_BYTES_LIST = [
     bytes.fromhex("01308201130201010420"),  # old, <2012
     bytes.fromhex("01d63081d30201010420"),  # new, >2012
@@ -80,8 +81,9 @@ def find_keys(filename: str | Path) -> set[str]:
                     key_data = b"\x80" + block_bytes[key_offset : key_offset + 32]  # noqa: E203
                     priv_key_wif = encode_base58_check(key_data)
                     keys.add(priv_key_wif)
+                    global_offset = f.tell() - len(block_bytes) + key_offset
                     logger.info(
-                        f"Found key at offset {key_offset:,} = 0x{key_offset:02x} "
+                        f"Found key at offset {global_offset:,} = 0x{global_offset:_x} "
                         f"(using magic bytes {magic_bytes.hex()}): {priv_key_wif}"
                     )
                     pos += 1
@@ -132,6 +134,7 @@ def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path]
 
     keys = find_keys(haystack_filename)
 
+    keys = sorted(list(keys))
     logger.info(f"Found {len(keys)} keys: {keys}")
 
     if len(keys) > 0:
