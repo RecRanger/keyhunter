@@ -1,7 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-import binascii
-import os
+
 import hashlib
 import sys
 
