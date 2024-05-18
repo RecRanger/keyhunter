@@ -122,6 +122,14 @@ def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path]
     setup_logging(log_path)
     logger.info("Starting keyhunter")
 
+    if log_path:
+        logger.info(f"Logging to console, and file: {log_path}")
+    else:
+        logger.info("Logging to console only.")
+
+    if not Path(haystack_filename).is_file():
+        raise FileNotFoundError(f"File not found: {haystack_filename}")
+
     keys = find_keys(haystack_filename)
 
     logger.info(f"Found {len(keys)} keys: {keys}")
@@ -137,13 +145,13 @@ def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path]
 def get_args():
     parser = argparse.ArgumentParser(description="Find Bitcoin private keys in a file.")
     parser.add_argument("filename", help="The file to search for keys.")
-    parser.add_argument("--log", help="Log file to write logs to.")
+    parser.add_argument("-l", "--log", dest="log_path", help="Log file to write logs to.")
     return parser.parse_args()
 
 
 def main_cli():
     args = get_args()
-    main_keyhunter(args.filename, log_path=args.log)
+    main_keyhunter(args.filename, log_path=args.log_path)
 
 
 if __name__ == "__main__":
