@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 
 
+import argparse
 import hashlib
+import logging
 import sys
+from typing import Optional
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
 
 # bytes to read at a time from file (10 MiB)
-readlength = 10 * 1024 * 1024
+READ_BLOCK_SIZE = 10 * 1024 * 1024
 
-magic = "\x01\x30\x82\x01\x13\x02\x01\x01\x04\x20"
-magiclen = len(magic)
+MAGIC_BYTES = b"\x01\x30\x82\x01\x13\x02\x01\x01\x04\x20"
+MAGIC_BYTES_LEN = len(MAGIC_BYTES)
 
 
-__b58chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-__b58base = len(__b58chars)
+B58_CHARS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+B58_BASE = len(B58_CHARS)  # literally 58
 
 
 def b58encode(v):
@@ -24,11 +31,11 @@ def b58encode(v):
         long_value += (256**i) * ord(c)
 
     result = ""
-    while long_value >= __b58base:
-        div, mod = divmod(long_value, __b58base)
-        result = __b58chars[mod] + result
+    while long_value >= B58_BASE:
+        div, mod = divmod(long_value, B58_BASE)
+        result = B58_CHARS[mod] + result
         long_value = div
-    result = __b58chars[long_value] + result
+    result = B58_CHARS[long_value] + result
 
     # Bitcoin does a little leading-zero-compression:
     # leading 0-bytes in the input become leading-1s
@@ -38,7 +45,7 @@ def b58encode(v):
             break
         nPad += 1
 
-    return (__b58chars[0] * nPad) + result
+    return (B58_CHARS[0] * nPad) + result
 
 
 def Hash(data):
@@ -50,43 +57,84 @@ def EncodeBase58Check(secret):
     return b58encode(secret + hash[0:4])
 
 
-def find_keys(filename):
+def find_keys(filename: str | Path) -> set[str]:
     keys = set()
     with open(filename, "rb") as f:
-        # read through target file one block at a time
-        while True:
-            data = f.read(readlength)
-            if not data:
-                break
+        logger.info(f"Opened file: {filename}")
 
+        # read through target file one block at a time
+        while data := f.read(READ_BLOCK_SIZE):
             # look in this block for keys
-            pos = 0
-            while True:
+            pos = 0  # index in the block
+            while (pos := data.find(MAGIC_BYTES, pos)) > -1:
                 # find the magic number
-                pos = data.find(magic, pos)
-                if pos == -1:
-                    break
-                key_offset = pos + magiclen
-                key_data = "\x80" + data[key_offset : key_offset + 32]
-                keys.add(EncodeBase58Check(key_data))
+                key_offset = pos + MAGIC_BYTES_LEN
+                key_data = "\x80" + data[key_offset : key_offset + 32]  # noqa: E203
+                priv_key_wif = EncodeBase58Check(key_data)
+                keys.add(priv_key_wif)
+                logger.info(
+                    f"Found key at offset {key_offset:,} = 0x{key_offset:02x}: {priv_key_wif}"
+                )
                 pos += 1
 
             # are we at the end of the file?
-            if len(data) == readlength:
+            if len(data) == READ_BLOCK_SIZE:
+                logger.info("At end of file. Seeking back 32 bytes.")
                 # make sure we didn't miss any keys at the end of the block
-                f.seek(f.tell() - (32 + magiclen))
+                f.seek(f.tell() - (32 + MAGIC_BYTES_LEN))
     return keys
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("./{0} <filename>".format(sys.argv[0]))
-        exit()
+def setup_logging(log_filename: Optional[str | Path] = None):
+    # Create a logger object
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)  # Set the logging level
 
-    keys = find_keys(sys.argv[1])
-    for key in keys:
-        print(key)
+    # Create a console handler and set level to debug
+    console_handler = logging.StreamHandler(sys.stdout)  # Using stdout instead of stderr
+    console_handler.setLevel(logging.DEBUG)
+    console_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # Optionally add a file handler
+    if log_filename:
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+    return logger
+
+
+def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path] = None):
+    setup_logging(log_path)
+    logger.info("Starting keyhunter")
+
+    keys = find_keys(haystack_filename)
+
+    logger.info(f"Found {len(keys)} keys: {keys}")
+
+    if len(keys) > 0:
+        logger.info("Keys (as base58 WIF private keys):")
+        for key in keys:
+            print(key)
+
+    logger.info("Finished keyhunter")
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description="Find Bitcoin private keys in a file.")
+    parser.add_argument("filename", help="The file to search for keys.")
+    parser.add_argument("--log", help="Log file to write logs to.")
+    return parser.parse_args()
+
+
+def main_cli():
+    args = get_args()
+    main_keyhunter(args.filename, log_path=args.log)
 
 
 if __name__ == "__main__":
-    main()
+    main_cli()

@@ -1,12 +1,12 @@
 {
     "editor.formatOnSave": true,
     "editor.rulers": [
-        79
+        99
     ],
     "flake8.args": [
-        "--max-line-length=79"
+        "--max-line-length=99"
     ],
     "black-formatter.args": [
-        "--line-length=79"
+        "--line-length=99"
     ],
 }
