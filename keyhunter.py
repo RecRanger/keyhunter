@@ -67,6 +67,7 @@ def find_keys(filename: str | Path) -> set[str]:
     """
 
     keys = set()
+    key_count = 0
     with open(filename, "rb") as f:
         logger.info(f"Opened file: {filename}")
 
@@ -80,11 +81,16 @@ def find_keys(filename: str | Path) -> set[str]:
                     key_offset = pos + MAGIC_BYTES_LEN
                     key_data = b"\x80" + block_bytes[key_offset : key_offset + 32]  # noqa: E203
                     priv_key_wif = encode_base58_check(key_data)
+                    is_new_key = priv_key_wif not in keys
+                    key_count += 1
                     keys.add(priv_key_wif)
                     global_offset = f.tell() - len(block_bytes) + key_offset
+
                     logger.info(
-                        f"Found key at offset {global_offset:,} = 0x{global_offset:_x} "
-                        f"(using magic bytes {magic_bytes.hex()}): {priv_key_wif}"
+                        f"Found {('new key' if is_new_key else 'key again')} "
+                        f"at offset {global_offset:,} = 0x{global_offset:_x} "
+                        f"(using magic bytes {magic_bytes.hex()}): {priv_key_wif} "
+                        f"({key_count:,} keys total, {len(keys):,} unique keys"
                     )
                     pos += 1
 
