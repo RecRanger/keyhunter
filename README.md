@@ -6,9 +6,9 @@ A tool to recover lost bitcoin private keys from dead hard drives.
 ## Usage
 
 ```bash
-python3 keyhunter.py /dev/sdX
+python3 keyhunter.py -i /dev/sdX --log ./sdX_log.log -o ./sdX_found_keys_list.txt
 # --or--
-./keyhunter.py /dev/sdX
+./keyhunter.py -i /dev/sdX --log ./sdX_log.log -o ./sdX_found_keys_list.txt
 ```
 
 The output should list found private keys, in base58 key import format.

@@ -90,7 +90,7 @@ def find_keys(filename: str | Path) -> set[str]:
                         f"Found {('new key' if is_new_key else 'key again')} "
                         f"at offset {global_offset:,} = 0x{global_offset:_x} "
                         f"(using magic bytes {magic_bytes.hex()}): {priv_key_wif} "
-                        f"({key_count:,} keys total, {len(keys):,} unique keys"
+                        f"({key_count:,} keys total, {len(keys):,} unique keys)"
                     )
                     pos += 1
 
@@ -126,7 +126,11 @@ def setup_logging(log_filename: Optional[str | Path] = None) -> logging.Logger:
     return logger
 
 
-def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path] = None):
+def main_keyhunter(
+    haystack_file_path: str | Path,
+    log_path: Optional[str | Path] = None,
+    output_keys_file_path: Optional[str | Path] = None,
+):
     setup_logging(log_path)
     logger.info("Starting keyhunter")
 
@@ -135,10 +139,10 @@ def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path]
     else:
         logger.info("Logging to console only.")
 
-    if not Path(haystack_filename).is_file():
-        raise FileNotFoundError(f"File not found: {haystack_filename}")
+    if not Path(haystack_file_path).is_file():
+        raise FileNotFoundError(f"File not found: {haystack_file_path}")
 
-    keys = find_keys(haystack_filename)
+    keys = find_keys(haystack_file_path)
 
     keys = sorted(list(keys))
     logger.info(f"Found {len(keys)} keys: {keys}")
@@ -148,19 +152,40 @@ def main_keyhunter(haystack_filename: str | Path, log_path: Optional[str | Path]
         for key in keys:
             print(key)
 
+    if output_keys_file_path:
+        with open(output_keys_file_path, "w") as f:
+            for key in keys:
+                f.write(key + "\n")
+
     logger.info(f"Finished keyhunter. Found {len(keys):,} keys.")
 
 
 def get_args():
     parser = argparse.ArgumentParser(description="Find Bitcoin private keys in a file.")
-    parser.add_argument("filename", help="The file to search for keys.")
+    parser.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        dest="input_file_path",
+        help="The input file (disk image, corrupt wallet.dat, etc.) to search for keys.",
+    )
     parser.add_argument("-l", "--log", dest="log_path", help="Log file to write logs to.")
+    parser.add_argument(
+        "-o",
+        "--output",
+        dest="output_file_path",
+        help="Output file to write the WIF write keys to.",
+    )
     return parser.parse_args()
 
 
 def main_cli():
     args = get_args()
-    main_keyhunter(args.filename, log_path=args.log_path)
+    main_keyhunter(
+        args.input_file_path,
+        log_path=args.log_path,
+        output_keys_file_path=args.output_file_path,
+    )
 
 
 if __name__ == "__main__":
