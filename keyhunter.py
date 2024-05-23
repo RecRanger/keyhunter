@@ -139,7 +139,7 @@ def main_keyhunter(
     else:
         logger.info("Logging to console only.")
 
-    if not Path(haystack_file_path).is_file():
+    if not Path(haystack_file_path).exists():
         raise FileNotFoundError(f"File not found: {haystack_file_path}")
 
     keys = find_keys(haystack_file_path)
